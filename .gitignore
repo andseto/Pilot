@@ -1,0 +1,22 @@
+# Build artifacts
+/build/
+/out/
+
+# vcpkg build artifacts (optional but recommended)
+vcpkg/buildtrees/
+vcpkg/packages/
+vcpkg/downloads/
+
+# vcpkg
+vcpkg/
+
+# Windows
+*.exe
+*.pdb
+*.ilk
+*.obj
+*.vcxproj*
+*.sln
+
+# Environment / secrets
+.env

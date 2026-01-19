@@ -4,6 +4,15 @@
 
 #include <cstdlib>
 #include <iostream>
+#include "ChatGPT/ChatGPT.h"
+
+//For file storing
+#include <fstream>
+#include <iostream>
+#include <string>
+
+//For having Pilot be active or not active
+#include <atomic>
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -24,32 +33,105 @@ int main()
         }
     #endif
 
+    //Setting Pilot active listen or not
+    std::atomic<bool> pilotActive{false};
+
     const char* key = std::getenv("ELEVENLABS_API_KEY");
     if (!key) {
         std::cerr << "Missing ELEVENLABS_API_KEY\n";
         return 1;
     }
-
+    
     ElevenLabsSttClient stt;
     std::set<std::string> wakePhrase = {
-        "Hey, Cypher.", "Hey Cypher.", "Hey Cypher", 
-        "Hey, Cypher.", "hey Cypher", "hey cypher", 
-        "hey, Cypher", "hey, cypher", "hey Cypher,", 
-        "Hey Cypher,", "Hey cypher,", "Hey, Cypher,", 
-        "Hey, cypher,", "cypher", "Cypher", "Cypher,",
-        "cypher"};
+        "Hey, Pilot.", "Hey Pilot.", "Hey Pilot", 
+        "Hey, Pilot.", "hey Pilot", "hey pilot", 
+        "hey, Pilot", "hey, pilot", "hey Pilot,", 
+        "Hey Pilot,", "Hey pilot,", "Hey, Pilot,", 
+        "Hey, pilot,", "pilot", "Pilot", "Pilot,",
+        "pilot",
+    };
 
-    stt.setCallback([&wakePhrase](const std::string& type, const std::string& text) {
+    std::set<std::string> sleepPhrase = {
+        "Thank You", "Thank You.", "Thank, You", "Thank, You.",
+        "thank you", "thank you.", "thank, you", "thank you.",
+        "Thank you.",
+    };
+
+    //File creation to store information and logging.
+    std::ofstream outFile("ConversationFile.txt", std::ios::app);
+    outFile.flush();
+    std::cout << "Log file open? " << outFile.is_open() << std::endl;
+
+    stt.setCallback([&wakePhrase, &pilotActive, &outFile, &sleepPhrase](const std::string &type, const std::string &text) {
         if (type == "committed_transcript" || type == "committed_transcript_with_timestamps") {
-            for (const auto& phrase : wakePhrase) {
-                if (text.find(phrase) != std::string::npos) {
-                    std::cout << "Wake phrase detected\n";
-                    break;
+
+            //If Pilot is NOT active: only look for wake words
+            if (!pilotActive.load())
+            {
+                for (const auto& phrase : wakePhrase)
+                {
+                    if (text.find(phrase) != std::string::npos)
+                    {
+                        std::cout << "Wake word detected : " << phrase << std::endl;
+                        pilotActive.store(true);
+
+                        std::cout << "Pilot is actively listening!" << std::endl;
+
+                        if (outFile.is_open())
+                        {
+                            outFile << "Wake word detected : " << phrase << std::endl;
+                            outFile << "Pilot: Online, sir. I'm listening." << std::endl;
+                        }
+                        outFile.flush();
+
+                        return;
+                    }
+                }
+
+                return;
+            }
+
+            //If Pilot IS active: check sleep words first
+            for (const auto& sleep : sleepPhrase)
+            {
+                if (text.find(sleep) != std::string::npos)
+                {
+                    pilotActive.store(false);
+
+                    std::cout << "Pilot: No problem, sir. Standing by." << std::endl;
+
+                    if (outFile.is_open())
+                    {
+                        outFile << "User: " << text << std::endl;
+                        outFile << "Pilot: No problem, sir. Standing by." << std::endl;
+                    }
+                    outFile.flush();
+
+                    return;
                 }
             }
 
-            //std::cout << text << "\n";
-        }
+            // 3) Pilot active + not sleeping: call ChatGPT once for this transcript
+            try
+            {
+                std::string reply = ChatGPT::Ask(text);
+
+                std::cout << "User: " << text << "\n";
+                std::cout << "Pilot: " << reply << "\n";
+
+                if (outFile.is_open())
+                {
+                    outFile << "User: " << text << std::endl;
+                    outFile << "Pilot: " << reply << std::endl;
+                }
+                outFile.flush();
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Pilot AI Error: " << e.what() << "\n";
+            }
+        } 
     });
 
     stt.connectVadPcm16000(key);
@@ -66,6 +148,9 @@ int main()
         );
         stt.sendPcmChunkBase64(b64, 16000, false);
     }
+
+    //Closing File
+    outFile.close();
 
     #ifdef _WIN32
     WSACleanup();

@@ -48,7 +48,9 @@ namespace ChatGPT {
         "When the user asks for steps, give numbered steps. "
         "If you need assumptions, state them briefly and proceed. "
         "Do not mention you are an AI unless asked. "
-        "Address the user as 'sir' unless they ask otherwise.";
+        "Address the user as 'sir' unless they ask otherwise."
+        "Also, this is an audio system so, when explaining or responding it sound be in a auditory format."
+        "This means smaller efficent responces but, this might change due to the complexity of the question";
 
         nlohmann::json body = {
             {"model", "gpt-4.1-mini"},

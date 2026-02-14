@@ -6,22 +6,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(VoiceToText
     src/main.cpp
-    src/SpeechToText/ElevenLabsSttClient.cpp
     src/SpeechToText/AudioCapture.cpp
-    src/SpeechToText/Base64.cpp
+    src/SpeechToText/DeepgramSttClient.cpp
+    src/SpeechToText/AudioCapture.cpp
     src/ChatGPT/ChatGPT.cpp
+    src/TextToSpeech/DeepgramTTS.cpp
 )
 
 find_package(ixwebsocket CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(portaudio CONFIG REQUIRED)
 find_package(cpr CONFIG REQUIRED)
+find_package(CURL CONFIG REQUIRED)
 
 target_link_libraries(VoiceToText PRIVATE
     ixwebsocket::ixwebsocket
     nlohmann_json::nlohmann_json
     portaudio
     cpr::cpr
+    CURL::libcurl
 )
 
 # So you can do: #include "ChatGPT/ChatGPT.h"

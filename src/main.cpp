@@ -1,6 +1,5 @@
 #include "SpeechToText/AudioCapture.h"
-#include "SpeechToText/ElevenLabsSttClient.h"
-#include "SpeechToText/Base64.h"
+#include "SpeechToText/DeepgramSttClient.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -13,6 +12,10 @@
 
 //For having Pilot be active or not active
 #include <atomic>
+
+//For Text to Speech
+#include "TextToSpeech/DeepgramTTS.h"
+#include <cstdlib> 
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -36,13 +39,16 @@ int main()
     //Setting Pilot active listen or not
     std::atomic<bool> pilotActive{false};
 
-    const char* key = std::getenv("ELEVENLABS_API_KEY");
+    const char* key = std::getenv("DEEPGRAM_API_KEY");
     if (!key) {
-        std::cerr << "Missing ELEVENLABS_API_KEY\n";
+        std::cerr << "Missing DEEPGRAM_API_KEY\n";
         return 1;
     }
     
-    ElevenLabsSttClient stt;
+    const std::string ttsModel = "aura-2-thalia-en"; // your voice
+
+    DeepgramSttClient stt;
+
     std::set<std::string> wakePhrase = {
         "Hey, Pilot.", "Hey Pilot.", "Hey Pilot", 
         "Hey, Pilot.", "hey Pilot", "hey pilot", 
@@ -63,7 +69,7 @@ int main()
     outFile.flush();
     std::cout << "Log file open? " << outFile.is_open() << std::endl;
 
-    stt.setCallback([&wakePhrase, &pilotActive, &outFile, &sleepPhrase](const std::string &type, const std::string &text) {
+    stt.setCallback([&wakePhrase, &pilotActive, &outFile, &sleepPhrase, &ttsModel, &key](const std::string &type, const std::string &text) {
         if (type == "committed_transcript" || type == "committed_transcript_with_timestamps") {
 
             //If Pilot is NOT active: only look for wake words
@@ -117,6 +123,28 @@ int main()
             {
                 std::string reply = ChatGPT::Ask(text);
 
+                const char* dgKey = std::getenv("DEEPGRAM_API_KEY");
+
+                if (dgKey != nullptr)
+                {
+                    const std::string audioFile = "reply.mp3";
+                    const std::string ttsModel  = "aura-2-thalia-en";  // Deepgram voice model
+
+                    if (Deepgram_TTS_ToFile(dgKey, ttsModel, reply, audioFile, "mp3"))
+                    {
+                        // Play audio using default Windows player
+                        system(("cmd /c start \"\" \"" + audioFile + "\"").c_str());
+                    }
+                    else
+                    {
+                        std::cerr << "[Deepgram] TTS request failed.\n";
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Deepgram] Missing DEEPGRAM_API_KEY environment variable.\n";
+                }
+
                 std::cout << "User: " << text << "\n";
                 std::cout << "Pilot: " << reply << "\n";
 
@@ -124,8 +152,8 @@ int main()
                 {
                     outFile << "User: " << text << std::endl;
                     outFile << "Pilot: " << reply << std::endl;
+                    outFile.flush();
                 }
-                outFile.flush();
             }
             catch (const std::exception& e)
             {
@@ -134,7 +162,10 @@ int main()
         } 
     });
 
-    stt.connectVadPcm16000(key);
+    if (!stt.connectPcm16000(key, "nova-3", true, true, 1200)) {
+        std::cerr << "Deepgram STT connect failed\n";
+        return 1;
+    }
 
     AudioCapture mic(16000, 320);
     mic.start();
@@ -142,11 +173,7 @@ int main()
     std::vector<int16_t> samples;
     while (true) {
         mic.read(samples);
-        auto b64 = base64_encode(
-            reinterpret_cast<uint8_t*>(samples.data()),
-            samples.size() * sizeof(int16_t)
-        );
-        stt.sendPcmChunkBase64(b64, 16000, false);
+        stt.sendPcmSamples(samples.data(), samples.size());
     }
 
     //Closing File

@@ -53,7 +53,7 @@ namespace ChatGPT {
         "This means smaller efficent responces but, this might change due to the complexity of the question";
 
         nlohmann::json body = {
-            {"model", "gpt-4.1-mini"},
+            {"model", "gpt-5.4-mini"},
             {"input", nlohmann::json::array({
                 {
                     {"role", "system"},

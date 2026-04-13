@@ -7,7 +7,7 @@ public:
     AudioCapture(int sampleRate, int framesPerBuffer);
     ~AudioCapture();
 
-    bool start();
+    bool start(int deviceIndex = -1); // -1 = system default
     void stop();
     bool read(std::vector<int16_t>& out);
 

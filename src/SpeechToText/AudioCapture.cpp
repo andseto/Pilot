@@ -1,5 +1,6 @@
 #include "AudioCapture.h"
 #include <portaudio.h>
+#include <iostream>
 
 AudioCapture::AudioCapture(int sampleRate, int framesPerBuffer)
     : sampleRate_(sampleRate), framesPerBuffer_(framesPerBuffer), stream_(nullptr)
@@ -13,23 +14,40 @@ AudioCapture::~AudioCapture()
     Pa_Terminate();
 }
 
-bool AudioCapture::start()
+bool AudioCapture::start(int deviceIndex)
 {
+    PaDeviceIndex device = (deviceIndex >= 0) ? deviceIndex : Pa_GetDefaultInputDevice();
+    const PaDeviceInfo* info = Pa_GetDeviceInfo(device);
+
+    PaStreamParameters inputParams;
+    inputParams.device                    = device;
+    inputParams.channelCount              = 1;
+    inputParams.sampleFormat              = paInt16;
+    inputParams.suggestedLatency          = info ? info->defaultLowInputLatency : 0.1;
+    inputParams.hostApiSpecificStreamInfo = nullptr;
+
     PaStream* s = nullptr;
-    PaError err = Pa_OpenDefaultStream(
+    PaError err = Pa_OpenStream(
         &s,
-        1,
-        0,
-        paInt16,
+        &inputParams,
+        nullptr,
         sampleRate_,
         framesPerBuffer_,
+        paClipOff,
         nullptr,
         nullptr
     );
-    if (err != paNoError) return false;
+    if (err != paNoError) {
+        std::cerr << "[AudioCapture] Failed to open mic: " << Pa_GetErrorText(err) << "\n";
+        return false;
+    }
 
     err = Pa_StartStream(s);
-    if (err != paNoError) { Pa_CloseStream(s); return false; }
+    if (err != paNoError) {
+        std::cerr << "[AudioCapture] Failed to start stream: " << Pa_GetErrorText(err) << "\n";
+        Pa_CloseStream(s);
+        return false;
+    }
 
     stream_ = s;
     return true;

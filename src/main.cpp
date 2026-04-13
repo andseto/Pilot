@@ -45,39 +45,40 @@ int main()
         return 1;
     }
     
-    const std::string ttsModel = "aura-2-thalia-en"; // your voice
-
+    const std::string ttsModel = "aura-2-odysseus-en"; // your voice
+    
     DeepgramSttClient stt;
 
     std::set<std::string> wakePhrase = {
-        "Hey, Pilot.", "Hey Pilot.", "Hey Pilot", 
-        "Hey, Pilot.", "hey Pilot", "hey pilot", 
-        "hey, Pilot", "hey, pilot", "hey Pilot,", 
-        "Hey Pilot,", "Hey pilot,", "Hey, Pilot,", 
-        "Hey, pilot,", "pilot", "Pilot", "Pilot,",
-        "pilot",
+        "hey pilot", "hey, pilot", "pilot",
     };
 
     std::set<std::string> sleepPhrase = {
-        "Thank You", "Thank You.", "Thank, You", "Thank, You.",
-        "thank you", "thank you.", "thank, you", "thank you.",
-        "Thank you.",
+        "thank you", "thank, you",
+    };
+
+    // Helper: convert string to lowercase for case-insensitive matching
+    auto toLower = [](const std::string& s) {
+        std::string result = s;
+        for (char& c : result) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        return result;
     };
 
     //File creation to store information and logging.
     std::ofstream outFile("ConversationFile.txt", std::ios::app);
     outFile.flush();
-    std::cout << "Log file open? " << outFile.is_open() << std::endl;
 
-    stt.setCallback([&wakePhrase, &pilotActive, &outFile, &sleepPhrase, &ttsModel, &key](const std::string &type, const std::string &text) {
+
+    stt.setCallback([&wakePhrase, &pilotActive, &outFile, &sleepPhrase, &ttsModel, &key, &toLower](const std::string &type, const std::string &text) {
         if (type == "committed_transcript" || type == "committed_transcript_with_timestamps") {
 
             //If Pilot is NOT active: only look for wake words
             if (!pilotActive.load())
             {
+                const std::string lowerText = toLower(text);
                 for (const auto& phrase : wakePhrase)
                 {
-                    if (text.find(phrase) != std::string::npos)
+                    if (lowerText.find(phrase) != std::string::npos)
                     {
                         std::cout << "Wake word detected : " << phrase << std::endl;
                         pilotActive.store(true);
@@ -99,9 +100,10 @@ int main()
             }
 
             //If Pilot IS active: check sleep words first
+            const std::string lowerText = toLower(text);
             for (const auto& sleep : sleepPhrase)
             {
-                if (text.find(sleep) != std::string::npos)
+                if (lowerText.find(sleep) != std::string::npos)
                 {
                     pilotActive.store(false);
 
@@ -168,7 +170,10 @@ int main()
     }
 
     AudioCapture mic(16000, 320);
-    mic.start();
+    if (!mic.start(3)) { // device 3 = Logitech PRO X Gaming Headset
+        std::cerr << "Failed to open microphone. Check mic permissions and default recording device.\n";
+        return 1;
+    }
 
     std::vector<int16_t> samples;
     while (true) {

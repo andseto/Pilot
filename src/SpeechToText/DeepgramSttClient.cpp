@@ -98,7 +98,7 @@ void DeepgramSttClient::handleMessage(const ix::WebSocketMessagePtr& msg)
             if (!transcript.empty() && cb_) {
                 bool isFinal = false;
                 if (j.contains("is_final"))      isFinal = j["is_final"].get<bool>();
-                if (j.contains("speech_final"))  isFinal = j["speech_final"].get<bool>(); // some configs :contentReference[oaicite:5]{index=5}
+                if (j.contains("speech_final"))  isFinal = j["speech_final"].get<bool>();
 
                 cb_(isFinal ? "committed_transcript" : "interim_transcript", transcript);
             }
@@ -114,6 +114,7 @@ void DeepgramSttClient::handleMessage(const ix::WebSocketMessagePtr& msg)
         std::cerr << "[DeepgramSTT] websocket error: " << msg->errorInfo.reason << "\n";
     }
     else if (msg->type == ix::WebSocketMessageType::Close) {
+        std::cout << "[DeepgramSTT] Connection closed. Code: " << msg->closeInfo.code << " Reason: " << msg->closeInfo.reason << "\n";
         isOpen_.store(false);
     }
 }

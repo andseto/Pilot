@@ -51,3 +51,41 @@ Pilot: The Sun is vastly larger than the Moon in terms of diameter and volume.
 In summary, the Sun is approximately 400 times wider and millions of times larger in volume than the Moon, sir.
 User: Thank you.
 Pilot: No problem, sir. Standing by.
+Wake word detected : hey, pilot
+Pilot: Online, sir. I'm listening.
+User: pilot,
+Pilot: Yes, sir? How may I assist you?
+Wake word detected : pilot
+Pilot: Online, sir. I'm listening.
+User: What's the weather today, pilot?
+Pilot: Sir, I currently do not have access to real-time weather data. Please check your preferred weather app or website for up-to-date information. Would you like assistance with anything else?
+User: Yes. It's Valentine's Day. What should I get my sweetheart?
+Pilot: Sir, for Valentine's Day, consider these thoughtful options:
+
+1. Classic flowers, especially red roses.
+2. A handwritten love letter or card.
+3. Personalized jewelry or keepsakes.
+4. A romantic dinner or experience.
+5. Something related to their hobbies or interests.
+
+Would you like specific suggestions based on your sweetheart’s preferences?
+User: No. Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected : hey, pilot
+Pilot: Online, sir. I'm listening.
+Wake word detected : hey, pilot
+Pilot: Online, sir. I'm listening.
+Wake word detected : hey, pilot
+Pilot: Online, sir. I'm listening.
+User: How much water does the average person drink?
+Pilot: Sir, on average, an adult drinks about **2 to 3 liters of fluids per day** — roughly **8 to 12 cups**.
+
+A simple breakdown:
+1. **Men:** about **3.7 liters** of total water daily from all sources  
+2. **Women:** about **2.7 liters** of total water daily from all sources  
+
+That includes **water from food and other drinks**, not just plain water.
+
+If you mean **plain drinking water only**, many people average around **1.5 to 2.5 liters a day**, depending on climate, activity, and diet.
+User: Thank you.
+Pilot: No problem, sir. Standing by.

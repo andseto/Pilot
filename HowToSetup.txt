@@ -1,0 +1,177 @@
+================================================================
+  PILOT - Voice Assistant  |  Setup Guide
+================================================================
+
+Short answer: You cannot just open and run it. You need to install
+a few tools, set two API keys, and build it once. After that it
+runs with a single command. This guide walks through every step.
+
+----------------------------------------------------------------
+STEP 1 - Install Required Tools
+----------------------------------------------------------------
+
+1a. Visual Studio 2022 (Community edition is free)
+    https://visualstudio.microsoft.com/vs/community/
+
+    During install, select the workload:
+      "Desktop development with C++"
+
+    This gives you the MSVC compiler and CMake.
+
+1b. Git
+    https://git-scm.com/download/win
+    (Needed to clone whisper.cpp)
+
+
+----------------------------------------------------------------
+STEP 2 - Get the Project
+----------------------------------------------------------------
+
+Copy or clone the VoiceToText project folder onto your machine.
+Make sure the following folders are present after copying:
+
+  VoiceToText/
+    src/
+    vcpkg/
+    vendor/whisper.cpp/     <-- see Step 3 if this is missing
+    models/
+    CMakeLists.txt
+    NP_CallOnMeAnyTime.mp3
+    UnderStood_FeedBack.mp3
+
+
+----------------------------------------------------------------
+STEP 3 - Set Up whisper.cpp (local AI, free)
+----------------------------------------------------------------
+
+If the vendor/whisper.cpp folder is missing or empty, clone it:
+
+  Open PowerShell in the VoiceToText folder and run:
+
+    git clone https://github.com/ggerganov/whisper.cpp vendor/whisper.cpp
+
+Then download the AI model file (~142 MB):
+
+    Invoke-WebRequest -Uri "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin" -OutFile "models\ggml-base.en.bin"
+
+If the models/ folder doesn't exist yet:
+
+    mkdir models
+
+
+----------------------------------------------------------------
+STEP 4 - Bootstrap vcpkg and Install Libraries
+----------------------------------------------------------------
+
+vcpkg manages the C++ libraries the project depends on.
+Run these commands from the VoiceToText folder in PowerShell:
+
+    .\vcpkg\bootstrap-vcpkg.bat
+
+    .\vcpkg\vcpkg.exe install ixwebsocket nlohmann-json portaudio cpr curl --triplet x64-windows
+
+This will take several minutes the first time.
+
+
+----------------------------------------------------------------
+STEP 5 - Set Your API Keys
+----------------------------------------------------------------
+
+The assistant uses two paid cloud services. You need accounts
+and API keys for both.
+
+  Deepgram  (Speech-to-Text + Text-to-Speech)
+    Sign up: https://console.deepgram.com
+    Free tier available. Copy your API key.
+
+  OpenAI  (ChatGPT)
+    Sign up: https://platform.openai.com
+    Go to API Keys and create one.
+
+Set both as Windows environment variables. In PowerShell:
+
+    [System.Environment]::SetEnvironmentVariable("DEEPGRAM_API_KEY", "your_key_here", "User")
+    [System.Environment]::SetEnvironmentVariable("OPENAI_API_KEY",   "your_key_here", "User")
+
+Close and reopen PowerShell after setting these so they take effect.
+
+
+----------------------------------------------------------------
+STEP 6 - Build the Project
+----------------------------------------------------------------
+
+From the VoiceToText folder in PowerShell:
+
+    cmake -B build -S . "-DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake"
+    cmake --build build --config Release
+
+The first build takes a few minutes (compiling whisper.cpp).
+Subsequent builds are fast.
+
+If successful you will see:
+    VoiceToText.exe -> ...\build\Release\VoiceToText.exe
+
+
+----------------------------------------------------------------
+STEP 7 - Set Your Microphone Device
+----------------------------------------------------------------
+
+The project is currently set to use microphone device index 3.
+This may be different on your machine.
+
+To find your device index, open PowerShell and run:
+
+    .\build\Release\VoiceToText.exe
+
+If the mic fails to open, you will see:
+    "Failed to open microphone."
+
+To list all audio devices, you can temporarily add this to
+main.cpp before the mic.start() call:
+
+    AudioCapture::listDevices();
+
+Or check your device index in Windows Sound Settings and count
+from 0 (default device is usually 0 or 1).
+
+To change the device, open src/main.cpp and find:
+
+    if (!mic.start(3))
+
+Change the 3 to your device index.
+Then rebuild: cmake --build build --config Release
+
+
+----------------------------------------------------------------
+STEP 8 - Run
+----------------------------------------------------------------
+
+    .\build\Release\VoiceToText.exe
+
+You will see:
+    [LocalWhisper] Model loaded: models/ggml-base.en.bin
+    [Pilot] Waiting for wake word...
+
+----------------------------------------------------------------
+HOW TO USE
+----------------------------------------------------------------
+
+  Say "hey pilot" or "pilot"   -> Activates, connects to cloud
+  Ask any question              -> Pilot thinks and responds
+  Say "thank you"               -> Deactivates, disconnects
+
+While waiting for wake word:   No API calls are made (free).
+While active:                  Deepgram + OpenAI are used.
+
+----------------------------------------------------------------
+SUMMARY OF API COSTS
+----------------------------------------------------------------
+
+  Wake word detection   - FREE  (runs locally via whisper.cpp)
+  Speech recognition    - Deepgram (paid, only while active)
+  AI responses          - OpenAI GPT (paid, only while active)
+  Text to speech        - Deepgram (paid, only while active)
+
+  Both services have free tiers that cover light personal use.
+
+================================================================

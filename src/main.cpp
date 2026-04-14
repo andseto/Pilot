@@ -14,11 +14,14 @@
 #include <fstream>
 #include <string>
 #include <atomic>
+#include <mutex>
 #include <cctype>
 #include <set>
 
 #include "TextToSpeech/DeepgramTTS.h"
 #include "Audio/AudioPlayer.h"
+#include "Commands/Commands.h"
+#include "Memory/ConversationMemory.h"
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -62,6 +65,7 @@ int main()
         return r;
     };
 
+    ConversationMemory memory;
     std::ofstream outFile("ConversationFile.txt", std::ios::app);
 
     // Microphone stays open the whole time (always capturing audio)
@@ -79,23 +83,31 @@ int main()
     {
         // ══════════════════════════════════════════════════════════════════
         // PHASE 1 — Local wake word detection (FREE, no API calls)
+        // Whisper runs on its own thread so the mic read loop never stalls
+        // and PortAudio's buffer never overflows during inference.
         // ══════════════════════════════════════════════════════════════════
         std::cout << "[Pilot] Waiting for wake word...\n";
         whisperBuf.clear();
-        bool wakeDetected = false;
+        std::atomic<bool> wakeDetected{false};
+        std::mutex wbMutex;
 
-        while (!wakeDetected) {
-            mic.read(samples);
+        std::thread inferThread([&]() {
+            while (!wakeDetected) {
+                std::vector<float> chunk;
+                {
+                    std::lock_guard<std::mutex> lk(wbMutex);
+                    if ((int)whisperBuf.size() >= WHISPER_WINDOW) {
+                        chunk.assign(whisperBuf.begin(), whisperBuf.begin() + WHISPER_WINDOW);
+                        whisperBuf.erase(whisperBuf.begin(), whisperBuf.begin() + WHISPER_WINDOW);
+                    }
+                }
 
-            // Convert int16 → float32 in [-1, 1] range for Whisper
-            for (auto s : samples)
-                whisperBuf.push_back(s / 32768.0f);
+                if (chunk.empty()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
+                }
 
-            // Run inference every 2 seconds of buffered audio
-            if ((int)whisperBuf.size() >= WHISPER_WINDOW) {
-                std::string text = localWhisper.transcribe(whisperBuf);
-                whisperBuf.clear();
-
+                std::string text = localWhisper.transcribe(chunk);
                 if (!text.empty()) {
                     const std::string lower = toLower(text);
                     for (const auto& phrase : wakePhrase) {
@@ -110,7 +122,20 @@ int main()
                     }
                 }
             }
+        });
+
+        // Main thread feeds audio as fast as PortAudio delivers it
+        while (!wakeDetected) {
+            mic.read(samples);
+            std::lock_guard<std::mutex> lk(wbMutex);
+            for (auto s : samples)
+                whisperBuf.push_back(s / 32768.0f);
+            // Cap buffer so inference thread always works on recent audio
+            if ((int)whisperBuf.size() > WHISPER_WINDOW * 3)
+                whisperBuf.erase(whisperBuf.begin(), whisperBuf.begin() + WHISPER_WINDOW);
         }
+
+        inferThread.join();
 
         // ══════════════════════════════════════════════════════════════════
         // PHASE 2 — Remote Deepgram session (PAID, only while active)
@@ -152,11 +177,21 @@ int main()
                 }
             }
 
-            // Active command → ChatGPT + TTS
+            // Active command → check local commands first, then ChatGPT
             try {
-                // Kick off ChatGPT immediately in the background
-                auto futureReply = std::async(std::launch::async, [&text]() {
-                    return ChatGPT::Ask(text);
+                if (Commands::TryHandle(text)) {
+                    // Command was handled locally — no API call needed
+                    if (outFile.is_open()) {
+                        outFile << "User: "  << text << "\n";
+                        outFile << "Pilot: [command executed]\n";
+                        outFile.flush();
+                    }
+                    return;
+                }
+
+                // Kick off ChatGPT immediately in the background (with history)
+                auto futureReply = std::async(std::launch::async, [&text, &memory]() {
+                    return ChatGPT::Ask(text, memory.getHistory());
                 });
 
                 // 1 second pause before feedback clip
@@ -170,6 +205,9 @@ int main()
 
                 // Get the reply (waits here only if the API isn't done yet)
                 std::string reply = futureReply.get();
+
+                // Save exchange to memory
+                memory.add(text, reply);
 
                 const char* dgKey = std::getenv("DEEPGRAM_API_KEY");
                 if (dgKey) {

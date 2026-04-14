@@ -239,3 +239,111 @@ User: How do you spell penguin?
 Pilot: Sir, penguin is spelled P E N G U I N.
 User: Thank you.
 Pilot: No problem, sir. Standing by.
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Open Trading setup.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Open trading setup.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: pilot
+Pilot: Online, sir. I'm listening.
+User: We
+Pilot: Hello sir, it seems your message was incomplete. Could you please provide more details or finish your thought? I'm here to help.
+User: Open YouTube.
+Pilot: Opening that in your browser now, sir.
+User: Open YouTube.
+Pilot: Opening that in your browser now, sir.
+User: Open Forex Factory.
+Pilot: Opening that in your browser now, sir.
+User: Open ASU Canvas.
+Pilot: Opening that in your browser now, sir.
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Play back in black on YouTube.
+Pilot: Opening that in your browser now, sir.
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey pilot
+Pilot: Online, sir. I'm listening.
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey pilot
+Pilot: Online, sir. I'm listening.
+User: Turn down my volume by 50%.
+Pilot: I'm unable to control your device volume directly, sir. However, you can usually adjust the volume using your keyboard's volume keys or through the sound settings on your device. Would you like me to guide you through that?
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Wake me up.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Start music.
+Pilot: Could you please tell me which music or app you'd like me to start playing, sir?
+User: Wake up.
+Pilot: I am here and ready to assist you, sir. How can I help you today?
+User: Pause music.
+Pilot: I'm not currently playing any music, sir. Let me know if you want me to start something or control a specific music app for you.
+Wake word detected: hey pilot
+Pilot: Online, sir. I'm listening.
+User: Wake me up.
+Pilot: [command executed]
+User: Stop music.
+Pilot: [command executed]
+User: Pause music.
+Pilot: [command executed]
+User: Turn off music.
+Pilot: [command executed]
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Wake me up.
+Pilot: [command executed]
+User: Kill music.
+Pilot: [command executed]
+User: I lost the trade.
+Pilot: I'm sorry to hear that, sir. Trading can be tough sometimes. If you'd like, I can help you review your trades, find some market news, or suggest strategies to improve. Just let me know how I can assist.
+User: I lost a trade
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: pilot
+Pilot: Online, sir. I'm listening.
+User: Kill music.
+Pilot: [command executed]
+Wake word detected: hey, pilot
+Pilot: Online, sir. I'm listening.
+User: Wake me up.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: pilot
+Pilot: Online, sir. I'm listening.
+User: Kill the music.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: hey pilot
+Pilot: Online, sir. I'm listening.
+User: I wanna trade
+Pilot: Certainly, sir. Are you looking for information on a specific market or asset to trade, or would you like assistance with setting up a trading platform? Let me know how I can support your trading today.
+User: I won a trade.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.
+Wake word detected: pilot
+Pilot: Online, sir. I'm listening.
+User: PIA Kill the music.
+Pilot: [command executed]
+User: Thank you.
+Pilot: No problem, sir. Standing by.

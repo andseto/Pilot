@@ -18,6 +18,8 @@ add_executable(VoiceToText
     src/ChatGPT/ChatGPT.cpp
     src/TextToSpeech/DeepgramTTS.cpp
     src/Audio/AudioPlayer.cpp
+    src/Commands/Commands.cpp
+    src/Memory/ConversationMemory.cpp
 )
 
 find_package(ixwebsocket CONFIG REQUIRED)

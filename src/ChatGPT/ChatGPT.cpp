@@ -2,9 +2,11 @@
 
 #include <cstdlib>
 #include <stdexcept>
+#include <optional>
 
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+#include "../Commands/Commands.h"
 
 namespace ChatGPT {
 
@@ -82,7 +84,27 @@ namespace ChatGPT {
         return out;
     }
 
-    std::string Ask(const std::string& prompt) {
+    struct ToolCall {
+        std::string name;
+        std::string arguments;
+    };
+
+    static std::optional<ToolCall> extract_tool_call(const nlohmann::json& j) {
+        if (!j.contains("output") || !j["output"].is_array())
+            return std::nullopt;
+
+        for (const auto& item : j["output"]) {
+            if (item.value("type", "") == "function_call") {
+                return ToolCall{
+                    item.value("name", ""),
+                    item.value("arguments", "{}")
+                };
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::string Ask(const std::string& prompt, const std::vector<Message>& history) {
         const std::string api_key = get_env_or_throw("OPENAI_API_KEY");
 
         //Pre set prompt to give personality to Pilot
@@ -98,22 +120,83 @@ namespace ChatGPT {
         "Do not mention you are an AI unless asked. "
         "Address the user as 'sir' unless they ask otherwise.";
 
-        nlohmann::json body = {
-            {"model", "gpt-5.4-mini"},
-            {"input", nlohmann::json::array({
-                {
-                    {"role", "system"},
-                    {"content", nlohmann::json::array({
-                        {{"type", "input_text"}, {"text", system_prompt}}
-                    })}
-                },
-                {
-                    {"role", "user"},
-                    {"content", nlohmann::json::array({
-                        {{"type", "input_text"}, {"text", prompt}}
-                    })}
-                }
+        nlohmann::json inputArray = nlohmann::json::array();
+
+        // System message
+        inputArray.push_back({
+            {"role", "system"},
+            {"content", nlohmann::json::array({
+                {{"type", "input_text"}, {"text", system_prompt}}
             })}
+        });
+
+        // Conversation history (oldest first)
+        for (const auto& msg : history) {
+            std::string contentType = (msg.role == "user") ? "input_text" : "output_text";
+            inputArray.push_back({
+                {"role", msg.role},
+                {"content", nlohmann::json::array({
+                    {{"type", contentType}, {"text", msg.content}}
+                })}
+            });
+        }
+
+        // Current user message
+        inputArray.push_back({
+            {"role", "user"},
+            {"content", nlohmann::json::array({
+                {{"type", "input_text"}, {"text", prompt}}
+            })}
+        });
+
+        nlohmann::json tools = nlohmann::json::array({
+            {
+                {"type", "function"},
+                {"name", "create_folder"},
+                {"description", "Creates a new folder on the user's computer."},
+                {"parameters", {
+                    {"type", "object"},
+                    {"properties", {
+                        {"name",     {{"type", "string"}, {"description", "The folder name to create."}}},
+                        {"location", {
+                            {"type", "string"},
+                            {"enum", {"desktop", "documents", "downloads"}},
+                            {"description", "Where to create the folder. Defaults to desktop."}
+                        }}
+                    }},
+                    {"required", {"name"}}
+                }}
+            },
+            {
+                {"type", "function"},
+                {"name", "open_application"},
+                {"description", "Opens an application on the user's computer."},
+                {"parameters", {
+                    {"type", "object"},
+                    {"properties", {
+                        {"app_name", {{"type", "string"}, {"description", "Application executable name or path, e.g. notepad, chrome, calc, explorer."}}}
+                    }},
+                    {"required", {"app_name"}}
+                }}
+            },
+            {
+                {"type", "function"},
+                {"name", "open_url"},
+                {"description", "Opens a URL in the user's default web browser."},
+                {"parameters", {
+                    {"type", "object"},
+                    {"properties", {
+                        {"url", {{"type", "string"}, {"description", "The full URL to open, including https://."}}}
+                    }},
+                    {"required", {"url"}}
+                }}
+            }
+        });
+
+        nlohmann::json body = {
+            {"model", "gpt-4.1-mini"},
+            {"input", inputArray},
+            {"tools", tools}
         };
 
         cpr::Response r = cpr::Post(
@@ -136,6 +219,14 @@ namespace ChatGPT {
         }
 
         auto json = nlohmann::json::parse(r.text);
+
+        // If ChatGPT chose a tool, execute it and return the spoken confirmation.
+        auto tc = extract_tool_call(json);
+        if (tc) {
+            std::string result = Commands::ExecuteTool(tc->name, tc->arguments);
+            return sanitizeForTTS(result);
+        }
+
         return sanitizeForTTS(extract_output_text(json));
     }
 
